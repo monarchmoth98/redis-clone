@@ -1,20 +1,34 @@
 import * as net from "net";
+import {ParserService} from "./parserService";
 
 // You can use print statements as follows for debugging, they'll be visible when running tests.
 console.log("Logs from your program will appear here!");
 
-// Uncomment this block to pass the first stage
-const server: net.Server = net.createServer((connection: net.Socket) => {
-   // Handle connection
-   console.log("Connected");
-   connection.on('end', () => {
-       console.log("Connection ended");
-   });
+export class RedisServer {
 
-   connection.on('data', (data) => {
-      console.log('received: ', data.toString());
-      connection.write('+PONG\r\n');
-   });
-});
+    server: net.Server;
 
-server.listen(6379, "127.0.0.1");
+    constructor(private readonly parserService: ParserService) {
+        this.server = net.createServer((connection: net.Socket) => {
+            console.log("Connected");
+            connection.on('end', () => {
+                console.log("Connection ended");
+            });
+
+            connection.on('data', (data) => {
+                try{
+                    connection.write(parserService.handleRequest(data));
+                } catch (error) {
+                    console.log(error);
+                }
+            });
+        })
+    }
+
+
+}
+
+const parserService = new ParserService();
+
+const eddis = new RedisServer(parserService);
+eddis.server.listen(6379);
